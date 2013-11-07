@@ -7,9 +7,8 @@
 
 #include "UltrasoundEchoReader.h"
 
-#define EXPECTED (11)
-#define EMPIRICAL (8)
-#define SCALE_CORRECTION (EXPECTED/EMPIRICAL)
+#define MAXBOUND (117) /* Inches */
+#define MINBOUND (3) /* Inches */
 
 int maximum;
 int minimum;
@@ -30,6 +29,7 @@ void UltrasoundEchoReader::run(){
 	uint8_t ipmask = 0b00010000;
 	uint64_t start, end;
 	int distance;
+	int flicker = 0;
 
 	while(1){
 		out8( _portc, 0x0F );
@@ -37,27 +37,36 @@ void UltrasoundEchoReader::run(){
 		out8( _portc, 0x00 );
 
 		while( (in8(_portc) & ipmask) == 0  ){
-			//sched_yield();
-			//usleep(100);
+		//	usleep(100);
 		}
-		printf("%X",in8(_portc));
 		start = ClockCycles();
 		while( (in8(_portc) & ipmask) > 0 ){
-			//sched_yield();
+			sched_yield();
 			//usleep(100);
 		}
 		end = ClockCycles();
 		distance = getDistance(start,end);
 
-		if(distance > maximum){
-			maximum = distance;
-		}
+		if (distance > MINBOUND && distance < MAXBOUND) {
+			if (distance > maximum) {
+				maximum = distance;
+			}
 
-		if(distance < minimum){
-			minimum = distance;
+			if (distance < minimum) {
+				minimum = distance;
+			}
+			// extra padding
+			printf("\rDistance: %din          ", distance);
+		} else {
+			// flashing asterisk
+			if( flicker ){
+				printf("\rDistance:          ");
+			}else{
+				printf("\rDistance: *          ");
+			}
+			flicker = !flicker;
 		}
-		printf("Distance: %din       \r",distance);
-		nanospin_ns(10000000);
+		nanospin_ns(1250000);
 	}
 }
 

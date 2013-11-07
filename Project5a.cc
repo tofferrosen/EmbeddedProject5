@@ -48,6 +48,7 @@ int getch()
 
 	tcsetattr(STDIN_FILENO, TCSANOW, &newt); /*apply the new terminal i/o settings immediatly */
 	ch = getchar(); /* standard getchar call */
+	putchar(ch);
 
 	tcsetattr(STDIN_FILENO, TCSANOW, &oldt); /* reapply the old settings */
 	return ch; /* return received char */
@@ -57,6 +58,8 @@ int main( void ){
 	/* Error Handling: */
 	int privity_err;
 	int return_code = EXIT_SUCCESS;
+	int c;
+	static struct termios oldt, newt;
 
 	/* Memory Mapped IO */
 	uintptr_t portc;
@@ -83,18 +86,23 @@ int main( void ){
 		out8( portc_dir, DIOCR_PORTC );
 		UltrasoundEchoReader * reader = new UltrasoundEchoReader( portc );
 
-		printf("Press any key to start measuring...\n");
-		//buf = getch();
-		printf("THINGS!");
-		//reader->startReading();
-		reader->run();
-		buf = getch();
 
+		printf("Press any key to start measuring...\n");
+		c = getch();
+
+		//reader->startReading();
+		reader->startReading();
+
+		c = getch();
 		reader->stopReading();
 
 		/** WRITE OUT MAX & MIN VALUES **/
 		printf("\n Minimum: %f \n", minimum);
 		printf("\n Maximum: %f \n", maximum);
+
+		/*restore the old settings*/
+		tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+
 	}
 
 	return return_code;

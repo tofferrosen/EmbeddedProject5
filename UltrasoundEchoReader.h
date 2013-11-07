@@ -14,8 +14,6 @@
 
 #include <sys/syspage.h>	/* Resource(s): cycles_per_second */
 
-
-
 #ifndef ULTRASOUNDECHOREADER_H_
 #define ULTRASOUNDECHOREADER_H_
 
