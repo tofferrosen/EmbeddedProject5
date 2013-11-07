@@ -13,7 +13,7 @@
 #include <sys/mman.h>		/* Resource(s): mmap_device_io() */
 #include <termios.h>
 #include <unistd.h>
-
+#include <iostream>
 #include "UltrasoundEchoReader.h"
 
 #define BYTE (1)
@@ -34,34 +34,23 @@
 #define DIOCR_PORTC ( 0b10001000 )
 
 
-struct termios old_termios_p;
+extern int minimum, maximum;
 
-int raw(int fd)
+int getch()
 {
-struct termios termios_p;
+	int ch;
+	struct termios oldt;
+	struct termios newt;
+	tcgetattr(STDIN_FILENO, &oldt); /*store old settings*/
+	std::cin.clear(); // clear EOF flag
+	newt = oldt; /* copy old settings to new settings */
+	newt.c_lflag &= ~(ICANON | ECHO); /* change settings - disable buffered i/o and set echo mode */
 
-if( tcgetattr( fd, &termios_p ) )
-return( -1 );
+	tcsetattr(STDIN_FILENO, TCSANOW, &newt); /*apply the new terminal i/o settings immediatly */
+	ch = getchar(); /* standard getchar call */
 
-termios_p.c_cc[VMIN] = 1;
-termios_p.c_cc[VTIME] = 0;
-termios_p.c_lflag &= ~( ECHO|ICANON|ECHOE|ECHOK|ECHONL );
-termios_p.c_oflag &= ~( OPOST );
-
-return( tcsetattr( fd, TCSADRAIN, &termios_p ) );
-}
-
-int unraw(int fd)
-{
-struct termios termios_p;
-
-if( tcgetattr( fd, &termios_p ) )
-return( -1 );
-
-termios_p.c_lflag |= ( ECHO|ICANON|ISIG|ECHOE|ECHOK|ECHONL );
-termios_p.c_oflag |= ( OPOST );
-
-return( tcsetattr( fd, TCSADRAIN, &termios_p ) );
+	tcsetattr(STDIN_FILENO, TCSANOW, &oldt); /* reapply the old settings */
+	return ch; /* return received char */
 }
 
 int main( void ){
@@ -78,10 +67,7 @@ int main( void ){
 	uint64_t cps;
 	uint64_t diff;
 	float diff_ms;
-	char buf;
-	char c;
-	char newline = '\n';
-	char newline2 = '\r';
+	int buf;
 
 	/* Enable GPIO access to the current thread: */
 	privity_err = ThreadCtl( _NTO_TCTL_IO, NULL );
@@ -89,26 +75,26 @@ int main( void ){
 		printf( "Error: Unable to acquire root permission for GPIO.\n" );
 		return_code = EXIT_FAILURE;
 	}else{
-		/* Create a pointer to Data Acquisition Port (Memory Mapped IO) */
+		/* Create a pointer to Data Acquisition Port (Memory Mapped IO): */
 		portc = mmap_device_io( BYTE, PORTC_ADDR );
 		portc_dir = mmap_device_io( BYTE, PORT_DIR_ADDR );
 
-		// Initialize the reader
-		UltrasoundEchoReader * reader = new UltrasoundEchoReader(portc);
+		/* Initialize Echo Reader: */
+		out8( portc_dir, DIOCR_PORTC );
+		UltrasoundEchoReader * reader = new UltrasoundEchoReader( portc );
 
 		printf("Press any key to start measuring...\n");
-		// wait for char input to start it
-		raw(STDIN_FILENO);
-		read(STDIN_FILENO, &buf, sizeof(buf));
-
-		//printf("%c",c);
+		//buf = getch();
+		printf("THINGS!");
+		//reader->startReading();
 		reader->run();
+		buf = getch();
 
-		read(STDIN_FILENO, &buf, sizeof(buf));
+		reader->stopReading();
 
-		printf("EXIT!");
-
-		unraw(STDIN_FILENO);
+		/** WRITE OUT MAX & MIN VALUES **/
+		printf("\n Minimum: %f \n", minimum);
+		printf("\n Maximum: %f \n", maximum);
 	}
 
 	return return_code;

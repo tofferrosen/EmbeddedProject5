@@ -7,6 +7,13 @@
 
 #include "UltrasoundEchoReader.h"
 
+#define EXPECTED (11)
+#define EMPIRICAL (8)
+#define SCALE_CORRECTION (EXPECTED/EMPIRICAL)
+
+int maximum;
+int minimum;
+
 float msCalc( uint64_t start, uint64_t end );
 
 UltrasoundEchoReader::UltrasoundEchoReader(uintptr_t portc) {
@@ -22,21 +29,34 @@ void UltrasoundEchoReader::run(){
 	uint8_t mask = 0b00001010;
 	uint8_t ipmask = 0b00010000;
 	uint64_t start, end;
+	int distance;
 
 	while(1){
 		out8( _portc, 0x0F );
-		nanospin_ns(10000);
+		nanospin_ns(15000);
 		out8( _portc, 0x00 );
 
 		while( (in8(_portc) & ipmask) == 0  ){
-			 usleep(100);
+			//sched_yield();
+			//usleep(100);
 		}
+		printf("%X",in8(_portc));
 		start = ClockCycles();
 		while( (in8(_portc) & ipmask) > 0 ){
-			 usleep(100);
+			//sched_yield();
+			//usleep(100);
 		}
 		end = ClockCycles();
-		printf("(%lld,%lld,%f)\r",start,end,msCalc(start,end));
+		distance = getDistance(start,end);
+
+		if(distance > maximum){
+			maximum = distance;
+		}
+
+		if(distance < minimum){
+			minimum = distance;
+		}
+		printf("Distance: %din       \r",distance);
 		nanospin_ns(10000000);
 	}
 }
@@ -50,7 +70,12 @@ void UltrasoundEchoReader::startReading(){
 	}
 }
 
-float msCalc( uint64_t start, uint64_t end ){
+void UltrasoundEchoReader::stopReading() {
+	 pthread_join(_thread,NULL);
+}
+
+int UltrasoundEchoReader::getDistance( uint64_t start, uint64_t end ){
 	uint64_t diff = end - start;
-	return (float)diff / ((float)(SYSPAGE_ENTRY(qtime)->cycles_per_sec)) * 1000.0;
+	float diffms = (float)diff / ((float)(SYSPAGE_ENTRY(qtime)->cycles_per_sec)) * 1000.0;
+	return (int)((diffms * 13.54408)/2);
 }

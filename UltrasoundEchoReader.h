@@ -24,15 +24,15 @@ public:
 	UltrasoundEchoReader(uintptr_t portc);
 	virtual ~UltrasoundEchoReader();
 
-	// start the thread
+	void startReading();
+	void stopReading();
+	int getDistance( uint64_t start, uint64_t end );
 	void run();
-
 protected:
 
-	void startReading();
 
 private:
-	static void * UltrasoundRunFunction(void * This) {((UltrasoundEchoReader*)This)->startReading(); return NULL;}
+	static void * UltrasoundRunFunction(void * This) {((UltrasoundEchoReader*)This)->run(); return NULL;}
 	pthread_t _thread;
 	uintptr_t _portc;
 
