@@ -10,8 +10,8 @@
 #define MAXBOUND (117) /* Inches */
 #define MINBOUND (3) /* Inches */
 
-int maximum;
-int minimum;
+int maximum = 0;
+int minimum = 999999;
 
 float msCalc( uint64_t start, uint64_t end );
 
@@ -31,7 +31,7 @@ void UltrasoundEchoReader::run(){
 	int distance;
 	int flicker = 0;
 
-	while(1){
+	while(_running){
 		out8( _portc, 0x0F );
 		nanospin_ns(15000);
 		out8( _portc, 0x00 );
@@ -71,6 +71,7 @@ void UltrasoundEchoReader::run(){
 }
 
 void UltrasoundEchoReader::startReading(){
+	_running = true;
 	int rc = pthread_create(&_thread, NULL, UltrasoundRunFunction, this);
 	if(rc){
 		//ERROR
@@ -80,7 +81,8 @@ void UltrasoundEchoReader::startReading(){
 }
 
 void UltrasoundEchoReader::stopReading() {
-	 pthread_join(_thread,NULL);
+	_running = false;
+	pthread_join(_thread, NULL);
 }
 
 int UltrasoundEchoReader::getDistance( uint64_t start, uint64_t end ){

@@ -97,8 +97,8 @@ int main( void ){
 		reader->stopReading();
 
 		/** WRITE OUT MAX & MIN VALUES **/
-		printf("\n Minimum: %f \n", minimum);
-		printf("\n Maximum: %f \n", maximum);
+		printf("\n Minimum distance: %d inches\n", minimum);
+		printf("Maximum distance: %d inches \n", maximum);
 
 		/*restore the old settings*/
 		tcsetattr(STDIN_FILENO, TCSANOW, &oldt);

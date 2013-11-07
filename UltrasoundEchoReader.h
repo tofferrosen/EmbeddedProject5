@@ -33,6 +33,7 @@ private:
 	static void * UltrasoundRunFunction(void * This) {((UltrasoundEchoReader*)This)->run(); return NULL;}
 	pthread_t _thread;
 	uintptr_t _portc;
+	bool _running;
 
 };
 #endif /* ULTRASOUNDECHOREADER_H_ */
