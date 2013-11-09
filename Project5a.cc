@@ -1,9 +1,15 @@
 /* =========================================================================== *
- * File:		gpio.c
- * Author:		Lennard Streat
- * Description:	Initializes general GPIO on the digital IO port.
+ * File:		Project5a.cc
+ * Author:		Lennard Streat, Christoffer Rosen
+ * Description:	Interacts with an SRF04 Ultrasound range sensor to measure
+ *				the distance from the SRF04 to objects in it's path.
+ *				Data Acquision Port Pinout:
+ *					- Pin 20: Pulse Trigger Input (Yellow Wire)
+ *					- Pin 21: Echo Output (Blue Wire)
+ *					- Pin 27: +5Volts DC (Red Wire)
+ *					- Pin 28: DGND (Black Wire)
  * =========================================================================== */
-
+/* Library Includes */
 #include <stdio.h>			/* Resource(s): printf() */
 #include <stdlib.h>			/* Resource(s): EXIT_* */
 #include <stdint.h>			/* Resource(s): uintptr_t */
@@ -14,11 +20,11 @@
 #include <termios.h>
 #include <unistd.h>
 #include <iostream>
+/* Project Specific Include: */
 #include "UltrasoundEchoReader.h"
 
+/* Constant used for the mman library */
 #define BYTE (1)
-#define WORD (2)
-#define DWORD (4)
 
 /* Port C Data Register */
 #define DIGITAL_IO_BASE_ADDR (0x280)
@@ -33,11 +39,17 @@
  * 	C3 = output */
 #define DIOCR_PORTC ( 0b10001000 )
 
+/* Global variables, used to store the values measured on the sensor */
+extern int minimum, maximum; /* Defined in UltrasoundEchoReader.h */
 
-extern int minimum, maximum;
-
-int getch()
-{
+/**
+ * Function:	getch
+ * Description:	Used as an alternative method from getchar. This returns
+ *				from the get char operation without requiring that a Carriage
+ *				return be sent to the buffer.
+ * Returns:		The character received from user input.
+ */
+int getch( void ){
 	int ch;
 	struct termios oldt;
 	struct termios newt;
@@ -48,25 +60,30 @@ int getch()
 
 	tcsetattr(STDIN_FILENO, TCSANOW, &newt); /*apply the new terminal i/o settings immediatly */
 	ch = getchar(); /* standard getchar call */
-	putchar(ch);
+	putchar(' ');
 
 	tcsetattr(STDIN_FILENO, TCSANOW, &oldt); /* reapply the old settings */
 	return ch; /* return received char */
-}
+}/* getch() */
 
+/**
+ * Function:	main
+ * Description:	The main entry point for the Ultrasound Range finder program.
+ * Returns:		The exit success--if it reaches the end  this will always be 0.
+ */
 int main( void ){
-	/* Error Handling: */
+	/* Error Handling & User Input: */
 	int privity_err;
 	int return_code = EXIT_SUCCESS;
 	int c;
 	static struct termios oldt, newt;
 
-	/* Memory Mapped IO */
+	/* Memory Mapped IO: */
 	uintptr_t portc;
 	uintptr_t portc_dir;
 	uint8_t cdata;
 
-	/* Timing */
+	/* Timing: */
 	uint64_t cps;
 	uint64_t diff;
 	float diff_ms;
@@ -86,23 +103,21 @@ int main( void ){
 		out8( portc_dir, DIOCR_PORTC );
 		UltrasoundEchoReader * reader = new UltrasoundEchoReader( portc );
 
-
+		/* Provide user input prompt: */
 		printf("Press any key to start measuring...\n");
 		c = getch();
 
-		//reader->startReading();
+		/* Ultrasound measurement thread: */
 		reader->startReading();
-
 		c = getch();
 		reader->stopReading();
 
-		/** WRITE OUT MAX & MIN VALUES **/
-		printf("\n Minimum distance: %d inches\n", minimum);
+		/* Display minimum & maximum values: */
+		printf("\nMinimum distance: %d inches\n", minimum);
 		printf("Maximum distance: %d inches \n", maximum);
 
-		/*restore the old settings*/
+		/* Restore the old settings (for user input): */
 		tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-
 	}
 
 	return return_code;
