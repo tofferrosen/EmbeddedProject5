@@ -44,7 +44,6 @@ void UltrasoundEchoReader::run( void ){
 	uint8_t data = 0x00;
 	uint64_t start, end;
 	unsigned int distance;
-	bool flicker = false;
 
 	while(_running){
 		/* Send pulse to SRF04 to begin reading range: */
