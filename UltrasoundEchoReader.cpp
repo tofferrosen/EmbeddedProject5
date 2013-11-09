@@ -44,7 +44,7 @@ void UltrasoundEchoReader::run( void ){
 	uint8_t data = 0x00;
 	uint64_t start, end;
 	unsigned int distance;
-	int flicker = 0;
+	bool flicker = false;
 
 	while(_running){
 		/* Send pulse to SRF04 to begin reading range: */
@@ -73,12 +73,11 @@ void UltrasoundEchoReader::run( void ){
 			printf( "\rDistance: %din                    ", distance );
 		} else {
 			/* Display flashing asterisk when out of range */
-			if( flicker ){
-				printf("\rDistance:                      ");
-			}else{
-				printf("\rDistance: *                    ");
-			}
-			flicker = !flicker;
+			printf("\rDistance:                      ");
+			nanospin_ns( DELAY_TIME * 5 ); // enough time to let human eye to see flashing
+			printf("\rDistance: *                    ");
+			nanospin_ns( DELAY_TIME * 5 ); // enough time to let human eye to see flashing
+			printf("\rDistance:                      ");
 		}
 		nanospin_ns( DELAY_TIME );
 	}
